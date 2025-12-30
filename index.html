@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=0.6">
+    <title>Z-A Pokedex Tracker - Cajas</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap');
+
+        /* --- CONFIGURACIÓN PARA IMPRESIÓN --- */
+        @media print {
+            @page {
+                size: 31cm 26cm;
+                margin: 0;
+            }
+            body { margin: 0; background: white; -webkit-print-color-adjust: exact; }
+            .sheet { box-shadow: none !important; margin: 0 !important; page-break-after: always; }
+            .no-print { display: none; }
+        }
+
+        /* --- ESTILOS GENERALES --- */
+        body {
+            font-family: 'Roboto Condensed', sans-serif;
+            background-color: #222;
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 { margin-bottom: 5px; color: #ffcb05; text-shadow: 2px 2px #3b4cca; }
+        p { color: #ccc; margin-bottom: 20px; font-size: 0.9rem; text-align: center; }
+
+        /* LA HOJA (CONTENEDOR PRINCIPAL) */
+        .sheet {
+            width: 31cm;
+            height: 26cm;
+            background: white;
+            display: flex;       /* Cambiado a Flex para apilar Header + Grid */
+            flex-direction: column;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ENCABEZADO TIPO "CAJA PC" */
+        .box-header {
+            width: 100%;
+            height: 1cm; /* El espacio que nos sobraba */
+            background-color: #4a4a4a; /* Gris oscuro tipo interfaz */
+            color: #fff;
+            display: flex;
+            align-items: center;
+            padding-left: 15px;
+            box-sizing: border-box;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #333;
+            /* Decoración tipo videojuego */
+            background-image: linear-gradient(45deg, #4a4a4a 25%, #555 25%, #555 50%, #4a4a4a 50%, #4a4a4a 75%, #555 75%, #555 100%);
+            background-size: 20px 20px;
+        }
+
+        .box-header span {
+            background: #222;
+            padding: 2px 10px;
+            border-radius: 4px;
+            border: 1px solid #666;
+        }
+
+        /* LA GRILLA DE POKEMON (6x5) */
+        .box-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 5cm);
+            grid-template-rows: repeat(5, 5cm);
+            justify-content: center;
+            align-content: center;
+            flex-grow: 1; /* Ocupa el resto del espacio */
+        }
+
+        /* CAJA INDIVIDUAL DE POKEMON */
+        .box {
+            width: 5cm;
+            height: 5cm;
+            border: 1px solid #e0e0e0;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            user-select: none;
+            background: #fff;
+        }
+
+        .box:hover { background-color: #f0f8ff; }
+
+        .box-num {
+            position: absolute;
+            top: 4px;
+            left: 6px;
+            font-size: 10px;
+            color: #999;
+            font-weight: bold;
+            z-index: 2;
+        }
+
+        .img-placeholder {
+            width: 4cm;
+            height: 4cm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 5px;
+            pointer-events: none;
+        }
+
+        .poke-img {
+            max-width: 90%;
+            max-height: 90%;
+            filter: grayscale(100%) opacity(0.5); 
+            transition: all 0.4s ease;
+        }
+
+        /* ESTADO ATRAPADO */
+        .box.caught {
+            background-color: #f0fff4; /* Verde muy suave */
+            border: 1px solid #9ae6b4;
+        }
+        
+        .box.caught .box-num { color: #38a169; }
+
+        .box.caught .poke-img {
+            filter: grayscale(0%) opacity(1);
+            transform: scale(1.1);
+            drop-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .box-name {
+            position: absolute;
+            bottom: 4px;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #444;
+            pointer-events: none;
+        }
+
+        .btn-reset {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #e53e3e;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print" style="text-align:center;">
+        <h1>Tracker Z-A Pokédex</h1>
+        <p>Vista de Cajas de PC. Toca para atrapar.</p>
+    </div>
+
+    <div id="pokedex-container"></div>
+
+    <div class="no-print">
+        <button class="btn-reset" onclick="resetProgress()">Borrar todo el progreso</button>
+    </div>
+
+    <script>
+        // DATOS
+        const rawData = `
+1	Chikorita
+2	Bayleef
+3	Meganium
+4	Tepig
+5	Pignite
+6	Emboar
+7	Totodile
+8	Croconaw
+9	Feraligatr
+10	Fletchling
+11	Fletchinder
+12	Talonflame
+13	Bunnelby
+14	Diggersby
+15	Scatterbug
+16	Spewpa
+17	Vivillon
+18	Weedle
+19	Kakuna
+20	Beedrill
+21	Pidgey
+22	Pidgeotto
+23	Pidgeot
+24	Mareep
+25	Flaaffy
+26	Ampharos
+27	Patrat
+28	Watchog
+29	Budew
+30	Roselia
+31	Roserade
+32	Magikarp
+33	Gyarados
+34	Binacle
+35	Barbaracle
+36	Staryu
+37	Starmie
+38	Flabébé
+39	Floette
+40	Florges
+41	Skiddo
+42	Gogoat
+43	Espurr
+44	Meowstic
+45	Litleo
+46	Pyroar
+47	Pancham
+48	Pangoro
+49	Trubbish
+50	Garbodor
+51	Dedenne
+52	Pichu
+53	Pikachu
+54	Raichu
+55	Cleffa
+56	Clefairy
+57	Clefable
+58	Spinarak
+59	Ariados
+60	Ekans
+61	Arbok
+62	Abra
+63	Kadabra
+64	Alakazam
+65	Gastly
+66	Haunter
+67	Gengar
+68	Venipede
+69	Whirlipede
+70	Scolipede
+71	Honedge
+72	Doublade
+73	Aegislash
+74	Bellsprout
+75	Weepinbell
+76	Victreebel
+77	Pansage
+78	Simisage
+79	Pansear
+80	Simisear
+81	Panpour
+82	Simipour
+83	Meditite
+84	Medicham
+85	Electrike
+86	Manectric
+87	Ralts
+88	Kirlia
+89	Gardevoir
+90	Gallade
+91	Houndour
+92	Houndoom
+93	Swablu
+94	Altaria
+95	Audino
+96	Spritzee
+97	Aromatisse
+98	Swirlix
+99	Slurpuff
+100	Eevee
+101	Vaporeon
+102	Jolteon
+103	Flareon
+104	Espeon
+105	Umbreon
+106	Leafeon
+107	Glaceon
+108	Sylveon
+109	Buneary
+110	Lopunny
+111	Shuppet
+112	Banette
+113	Vanillite
+114	Vanillish
+115	Vanilluxe
+116	Numel
+117	Camerupt
+118	Hippopotas
+119	Hippowdon
+120	Drilbur
+121	Excadrill
+122	Sandile
+123	Krokorok
+124	Krookodile
+125	Machop
+126	Machoke
+127	Machamp
+128	Gible
+129	Gabite
+130	Garchomp
+131	Carbink
+132	Sableye
+133	Mawile
+134	Absol
+135	Riolu
+136	Lucario
+137	Slowpoke
+138	Slowbro
+139	Slowking
+140	Carvanha
+141	Sharpedo
+142	Tynamo
+143	Eelektrik
+144	Eelektross
+145	Dratini
+146	Dragonair
+147	Dragonite
+148	Bulbasaur
+149	Ivysaur
+150	Venusaur
+151	Charmander
+152	Charmeleon
+153	Charizard
+154	Squirtle
+155	Wartortle
+156	Blastoise
+157	Stunfisk
+158	Furfrou
+159	Inkay
+160	Malamar
+161	Skrelp
+162	Dragalge
+163	Clauncher
+164	Clawitzer
+165	Goomy
+166	Sliggoo
+167	Goodra
+168	Delibird
+169	Snorunt
+170	Glalie
+171	Froslass
+172	Snover
+173	Abomasnow
+174	Bergmite
+175	Avalugg
+176	Scyther
+177	Scizor
+178	Pinsir
+179	Heracross
+180	Emolga
+181	Hawlucha
+182	Phantump
+183	Trevenant
+184	Scraggy
+185	Scrafty
+186	Noibat
+187	Noivern
+188	Klefki
+189	Litwick
+190	Lampent
+191	Chandelure
+192	Aerodactyl
+193	Tyrunt
+194	Tyrantrum
+195	Amaura
+196	Aurorus
+197	Onix
+198	Steelix
+199	Aron
+200	Lairon
+201	Aggron
+202	Helioptile
+203	Heliolisk
+204	Pumpkaboo
+205	Gourgeist
+206	Larvitar
+207	Pupitar
+208	Tyranitar
+209	Froakie
+210	Frogadier
+211	Greninja
+212	Falinks
+213	Chespin
+214	Quilladin
+215	Chesnaught
+216	Skarmory
+217	Fennekin
+218	Braixen
+219	Delphox
+220	Bagon
+221	Shelgon
+222	Salamence
+223	Kangaskhan
+224	Drampa
+225	Beldum
+226	Metang
+227	Metagross
+228	Xerneas
+229	Yveltal
+230	Zygarde
+231	Diancie
+232	Mewtwo
+`;
+
+        const container = document.getElementById('pokedex-container');
+        const lines = rawData.trim().split('\n');
+        const itemsPerPage = 30;
+        const totalPages = Math.ceil(lines.length / itemsPerPage);
+
+        // LOGICA DE GUARDADO
+        let caughtPokemon = JSON.parse(localStorage.getItem('za_pokedex_caught')) || [];
+
+        function formatNameForUrl(name) {
+            return name.toLowerCase()
+                       .replace(/\./g, '')
+                       .replace(/\s+/g, '-')
+                       .replace(/é/g, 'e')
+                       .replace(/♀/g, '-f')
+                       .replace(/♂/g, '-m')
+                       .replace(/'/g, '');
+        }
+
+        function toggleCaught(id) {
+            const index = caughtPokemon.indexOf(id);
+            const box = document.getElementById(`box-${id}`);
+            
+            if (index === -1) {
+                caughtPokemon.push(id);
+                box.classList.add('caught');
+            } else {
+                caughtPokemon.splice(index, 1);
+                box.classList.remove('caught');
+            }
+            localStorage.setItem('za_pokedex_caught', JSON.stringify(caughtPokemon));
+        }
+
+        function resetProgress() {
+            if(confirm("¿Seguro que quieres borrar todo el progreso?")) {
+                localStorage.removeItem('za_pokedex_caught');
+                location.reload();
+            }
+        }
+
+        // GENERAR HOJAS
+        for (let i = 0; i < totalPages; i++) {
+            // Contenedor principal de la hoja
+            const sheet = document.createElement('div');
+            sheet.className = 'sheet';
+            
+            // 1. EL ENCABEZADO (Caja XX)
+            const header = document.createElement('div');
+            header.className = 'box-header';
+            // PadStart asegura que sea "01", "02", etc.
+            const boxNumber = String(i + 1).padStart(2, '0');
+            header.innerHTML = `<span>CAJA ${boxNumber}</span>`;
+            sheet.appendChild(header);
+
+            // 2. LA GRILLA (6x5)
+            const grid = document.createElement('div');
+            grid.className = 'box-grid';
+
+            for (let j = 0; j < itemsPerPage; j++) {
+                const currentIndex = (i * itemsPerPage) + j;
+                const box = document.createElement('div');
+                box.className = 'box';
+
+                if (currentIndex < lines.length) {
+                    const parts = lines[currentIndex].trim().split(/\s+(.+)/);
+                    if(parts.length >= 2){
+                        const id = parts[0];
+                        const name = parts[1];
+                        const cleanName = formatNameForUrl(name);
+                        const imgUrl = `https://img.pokemondb.net/sprites/home/normal/${cleanName}.png`;
+
+                        box.id = `box-${id}`;
+                        box.onclick = () => toggleCaught(id);
+
+                        if (caughtPokemon.includes(id)) {
+                            box.classList.add('caught');
+                        }
+
+                        box.innerHTML = `
+                            <span class="box-num">#${id}</span>
+                            <div class="img-placeholder">
+                                <img src="${imgUrl}" class="poke-img" loading="lazy" alt="${name}" onerror="this.style.display='none';this.parentElement.innerHTML='?'">
+                            </div>
+                            <span class="box-name">${name}</span>
+                        `;
+                    }
+                } else {
+                    box.style.background = "#fbfbfb";
+                    box.style.cursor = "default";
+                }
+                grid.appendChild(box);
+            }
+            
+            sheet.appendChild(grid);
+            container.appendChild(sheet);
+        }
+    </script>
+</body>
+</html>
